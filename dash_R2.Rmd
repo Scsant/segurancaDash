@@ -81,7 +81,7 @@ library(htmlwidgets)
 
 
 # Carregar dados
-df_seguranca <- read_excel("F:/Logistica_Florestal/EQUIPE/Sócrates Luis dos Santos/Dados/Segurança_evento/001.DBControleEventos - 29.11.2024.xlsx")
+df_seguranca <- read_excel("F:/Logistica_Florestal/EQUIPE/Sócrates Luis dos Santos/Dados/Segurança_evento/001.DBControleEventos - 31.12.2024.xlsx")
 
 # Agrupar e contar eventos por GERÊNCIA
 df_gerencia <- df_seguranca %>%
@@ -155,7 +155,7 @@ df_AI <- df_seguranca %>%
 
 ```
 
-DASHBOARD 
+DASHBOARD - 2024
 ===
 
 Inputs {.sidebar}
@@ -206,7 +206,7 @@ renderValueBox({
   filtered_data <- if (input$gerencia == "Todas") {
     df_ocorrencias_mensais
   } else {
-    df_seguranca %>%
+    df_seguranca25 %>%
       filter(GERÊNCIA == input$gerencia) %>%
       group_by(MÊS) %>%
       summarise(Total = n(), .groups = "drop")
@@ -487,7 +487,7 @@ renderPlotly({
 
     scale_color_manual(values = c("Transporte Madeira" = "#0047B8", "Carregamento De Madeira" = "#ff7f0e", "Pátio de Madeira" = "#A4D55D")) +
     theme(
-      axis.text.x = element_text(angle = 0, hjust = 1, color = "black"),
+      axis.text.x = element_text(angle = 30, hjust = 1, color = "black"),
       axis.text.y = element_text(color = "#1f1f1f"),
       axis.title = element_text(color = "#1f1f1f"),
       plot.title = element_text(color = "black"),
@@ -683,8 +683,8 @@ Columns
 ```{r}
 #install.packages("DT")
 library(DT)
-# Filtrar os dados do df_seguranca pelas gerências específicas
-# Filtrar os dados do df_seguranca pelas gerências específicas
+# Filtrar os dados do df_seguranca25 pelas gerências específicas
+# Filtrar os dados do df_seguranca25 pelas gerências específicas
 df_tabela <- df_seguranca %>%
   filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
   select(`MÊS`, EMPRESA, `GERÊNCIA`, COLABORADOR, `FUNÇÃO`, SEVERIDADE, `CLASSIFICAÇÃO`, `MÓDULO/ FRENTE DE TRABALHO`, `R.A.E`, `DATA R.A.E ASSINADA`, `R.A.E FINALIZADA DENTRO DO PRAZO`)
@@ -718,21 +718,669 @@ datatable(
 ```
 
 
-Pagina 3
+
+DASHBOARD - 2025
 ==============================================================================
 
-Perguntas e Respostas
-------------------------------------------------------------------------------
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# <- install.packages("flexdashboard")
+# Carregar pacotes necessários
+library(flexdashboard)
+library(shiny)
+library(readxl)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(tidyr)
+library(htmlwidgets)
 
-### Pergunte sobre os dados de segurança
 
-```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+# Carregar dados
+df_seguranca25 <- read_excel("F:/Logistica_Florestal/EQUIPE/Sócrates Luis dos Santos/Dados/Segurança_evento/001.DBControleEventos - 07.02.2025.xlsx")
+
+# Agrupar e contar eventos por GERÊNCIA
+df_gerencia25 <- df_seguranca25 %>%
+  group_by(`GERÊNCIA`) %>%
+  summarise(contagem = n()) %>%
+  arrange(desc(contagem))
+
+# Filtrar os setores específicos
+df_setores25 <- df_gerencia %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira"))
+
+# Criar um vetor de meses em português
+meses <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+
+# Ordenar a coluna MÊS
+df_seguranca25$`MÊS` <- factor(df_seguranca25$`MÊS`, levels = meses, ordered = TRUE)
+
+# Agrupar e contar eventos por mês e GERÊNCIA
+df_mensal25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  group_by(`MÊS`, `GERÊNCIA`) %>%
+  summarise(contagem = n(), .groups = "drop") %>%
+  arrange(`MÊS`, `GERÊNCIA`)
+
+# Agrupar e contar eventos por CLASSIFICAÇÃO
+df_classificacao25 <- df_seguranca25 %>%
+  group_by(`CLASSIFICAÇÃO`) %>%
+  summarise(contagem = n(), .groups = "drop") %>%
+  arrange(desc(contagem))
+
+# Agrupar eventos por CLASSIFICAÇÃO dentro de cada setor
+df_classificacao_setores25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  group_by(`GERÊNCIA`, `CLASSIFICAÇÃO`) %>%
+  summarise(contagem = n(), .groups = "drop") %>%
+  arrange(`GERÊNCIA`, desc(contagem))
+
+# Calcular o total de ocorrências de eventos
+total_ocorrencias25 <- nrow(df_seguranca25)
+
+# Criar df_ocorrencias_mensais
+df_ocorrencias_mensais25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  group_by(`MÊS`, `GERÊNCIA`) %>%
+  summarise(Total = n(), .groups = "drop") %>%
+  spread(`GERÊNCIA`, Total, fill = 0) %>%
+  mutate(Total = rowSums(select(., where(is.numeric))))
+
+# Agrupar por EMPRESA e GERÊNCIA
+df_empresa_filtrada25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  group_by(EMPRESA, `GERÊNCIA`) %>%
+  summarise(contagem = n(), .groups = "drop") %>%
+  arrange(EMPRESA, `GERÊNCIA`)
+
+# Filtrar dados para Status RAE
+df_rae25 <- df_seguranca25 %>% 
+  select(`GERÊNCIA`, SEVERIDADE, R.A.E, `PRAZO ABERTURA R.A.E`, STATUS, `DIAS ATRASADO`) %>% 
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>% 
+  filter(STATUS != FALSE, !is.na(STATUS))
+
+df_severo25 <- df_seguranca25 %>% 
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>% 
+  group_by(SEVERIDADE, `GERÊNCIA`) %>% 
+  #sumarise(contagem = n(), .groups = "drop") %>% 
+  arrange(SEVERIDADE, `GERÊNCIA`)
+
+df_AI25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  select(`MÊS`, EMPRESA, `GERÊNCIA`, COLABORADOR, `FUNÇÃO`, SEVERIDADE, `CLASSIFICAÇÃO`, `DESCRIÇÃO`, `MÓDULO/ FRENTE DE TRABALHO`)
+
+
+```
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------------
+
+
+```{r}
+
+
+selectInput("gerencia", "Gerência:", choices = c("Todas", unique(df_mensal25$`GERÊNCIA`)), selected = "Todas")
+# Adiciona a imagem no sidebar
+
+tags$img(src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROQ7UZCIUyWjt3elljowRdsBIGHNw0xWLU1w&s", height = '100%', width = '100%')
+```
+#Row {data.height=50}
+----------------------------------------------------------------------
+### ValueboxB
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(`GERÊNCIA` == input$gerencia) %>%
+      group_by(`MÊS`) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_janeiro25 <- filtered_data25 %>%
+    filter(`MÊS` == "janeiro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_janeiro25, caption = "JAN")
+})
+
+
+
+```
+
+### ValueboxC
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_fevereiro25 <- filtered_data25 %>%
+    filter(MÊS == "fevereiro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_fevereiro25, caption = "FEV")
+})
+
+
+```
+
+### ValueboxD
+```{r}
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_marco25 <- filtered_data25 %>%
+    filter(MÊS == "março") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_marco25, caption = "MAR")
+})
+
+
+```
+
+### ValueboxE
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_abril25 <- filtered_data25 %>%
+    filter(MÊS == "abril") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_abril25, caption = "ABR")
+})
+
+```
+
+### ValueboxF
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_maio25 <- filtered_data25 %>%
+    filter(MÊS == "maio") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_maio25, caption = "MAI")
+})
+
+```
+### ValueboxG
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_junho25 <- filtered_data25 %>%
+    filter(MÊS == "junho") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_junho25, caption = "JUN")
+})
+
+```
+### ValueboxH
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_julho25 <- filtered_data25 %>%
+    filter(MÊS == "julho") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_julho25, caption = "JUL")
+})
+
+```
+### ValueboxI
+```{r}
+
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(GERÊNCIA == input$gerencia) %>%
+      group_by(MÊS) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_agosto25 <- filtered_data25 %>%
+    filter(MÊS == "agosto") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_agosto25, caption = "AGO")
+})
+
+```
+### ValueboxJ
+```{r}
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(`GERÊNCIA` == input$gerencia) %>%
+      group_by(`MÊS`) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_setembro25 <- filtered_data25 %>%
+    filter(`MÊS` == "setembro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_setembro25, caption = "SET")
+})
+```
+### ValueboxJ
+```{r}
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(`GERÊNCIA` == input$gerencia) %>%
+      group_by(`MÊS`) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_outubro25 <- filtered_data25 %>%
+    filter(`MÊS` == "outubro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_outubro25, caption = "OUT")
+})
+```
+### ValueboxJ
+```{r}
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(`GERÊNCIA` == input$gerencia) %>%
+      group_by(`MÊS`) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_novembro25 <- filtered_data25 %>%
+    filter(`MÊS` == "novembro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_novembro25, caption = "NOV")
+})
+```
+### ValueboxJ
+```{r}
+renderValueBox({
+  # Filtrar os dados com base na gerência selecionada
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_ocorrencias_mensais25
+  } else {
+    df_seguranca25 %>%
+      filter(`GERÊNCIA` == input$gerencia) %>%
+      group_by(`MÊS`) %>%
+      summarise(Total = n(), .groups = "drop")
+  }
+  
+  total_ocorrencias_dezembro25 <- filtered_data25 %>%
+    filter(`MÊS` == "dezembro") %>%
+    summarise(total = sum(Total)) %>%
+    .$total
+
+  valueBox(total_ocorrencias_dezembro25, caption = "DEZ")
+})
+```
+### ValueboxA
+
+```{r}
+renderValueBox({
+  filtered_data25 <- if (input$gerencia == "Todas") {
+    df_mensal25
+  } else {
+    df_mensal25 %>% filter(GERÊNCIA == input$gerencia)
+  }
+  
+  total_ocorrencias_log25 <- sum(filtered_data25$contagem)
+  
+  valueBox(total_ocorrencias_log25, caption = "TOTAL ANO")
+})
+
+```
+---------------------------------------------------------
+
+Column {data-width=60}
+-----------------------------------------------------------------------
+
+### Ocorrências Mensais por Setores
+```{r}
+
+renderPlotly({
+  filtered_data25 <- reactive({
+    if (input$gerencia == "Todas") {
+      df_mensal25
+    } else {
+      df_mensal25 %>% filter(GERÊNCIA == input$gerencia)
+    }
+  })
+  
+  p_linha25 <- ggplot(filtered_data25(), aes(x = MÊS, y = contagem, color = GERÊNCIA, group = GERÊNCIA)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) +
+    
+
+    scale_color_manual(values = c("Transporte Madeira" = "#0047B8", "Carregamento De Madeira" = "#ff7f0e", "Pátio de Madeira" = "#A4D55D")) +
+    theme(
+      axis.text.x = element_text(angle = 30, hjust = 1, color = "black"),
+      axis.text.y = element_text(color = "#1f1f1f"),
+      axis.title = element_text(color = "#1f1f1f"),
+      plot.title = element_text(color = "black"),
+      axis.title.x = element_blank(),  # Remove o nome do eixo x
+      axis.title.y = element_blank(),  # Remove o nome do eixo y
+      #legend.background = element_rect(fill = "white"),
+      #legend.text = element_text(color = "black"),
+      #legend.title = element_text(color = "black"),
+      #legend.key = element_blank(), 
+      #panel.grid.major = element_blank(),
+      #panel.grid.minor = element_blank()
+    )
+  
+  ggplotly(p_linha25) %>% layout(paper_bgcolor = 'white', plot_bgcolor = 'white')
+})
+
+
+```
+
+### Ocorrências por Classificação
+
+```{r}
+
+renderPlotly({
+  filtered_classificacao_data25 <- reactive({
+    if (input$gerencia == "Todas") {
+      df_classificacao_setores25
+    } else {
+      df_classificacao_setores25 %>% filter(GERÊNCIA == input$gerencia)
+    }
+  })
+  
+  p_colunas_classificacao25 <- ggplot(filtered_classificacao_data25(), aes(x = CLASSIFICAÇÃO, y = contagem, fill = GERÊNCIA)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c(
+      "Transporte Madeira" = "#0047B8",
+      "Pátio de Madeira" = "#A4D55D",
+      "Carregamento De Madeira" = "orange"
+    )) +
+
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+      axis.text.y = element_text(color = "black"),
+      axis.title = element_text(color = "black"),
+      plot.title = element_text(color = "black"),
+      axis.title.x = element_blank(),  # Remove o nome do eixo x
+      axis.title.y = element_blank()
+      #legend.background = element_rect(fill = 'white'),
+      #legend.text = element_text(color = "black"),
+      #legend.title = element_text(color = "black"),
+      #legend.key = element_blank(),
+      #legend.box.background = element_blank(),
+      #panel.grid.major = element_blank(),
+      #panel.grid.minor = element_blank()
+    )
+  
+  ggplotly(p_colunas_classificacao25) %>% layout(paper_bgcolor = 'white', plot_bgcolor = 'white')
+})
+
+
+```
+
+Column {data-width=40}
+-----------------------------------------------------------------------
+
+### Ocorrências por Empresa
+
+```{r}
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(plotly)
+
+# Filtrar empresas que não são "Bracell"
+df_empresa_filtrada_sem_bracell25 <- df_empresa_filtrada25 %>%
+  filter(EMPRESA != "Bracell")
+
+# Dicionário de abreviações
+abreviacoes25 <- c(
+  "Expresso Nepomuceno" = "Nepomuceno",
+  "Transloger" = "Translog.",
+  "Cargo Polo" = "Cargo Polo",
+  "Pladec" = "Pladec",
+  "Garbuio" = "Garbuio",
+  "Ponsse" = "Ponsse",
+  "VDA" = "VDA",
+  "Transpet" = "Transpet",
+  "Model" = "Model",
+  "JSL" = "JSL",
+  "Alexandre Aparecido Cruz Froes" = "Froes"
+)
+
+# Substituir os nomes completos pelas abreviações
+df_empresa_filtrada_sem_bracell25 <- df_empresa_filtrada_sem_bracell25 %>%
+  mutate(EMPRESA = str_replace_all(EMPRESA, abreviacoes))
+
+renderPlotly({
+  # Criação de um reativo para os dados filtrados
+  filtered_empresa_data25 <- reactive({
+    if (input$gerencia == "Todas") {
+      df_empresa_filtrada_sem_bracell25
+    } else {
+      df_empresa_filtrada_sem_bracell25 %>% filter(GERÊNCIA == input$gerencia)
+    }
+  })
+
+  # Criação do gráfico de barras
+  p_bar_empresa25 <- ggplot(filtered_empresa_data25(), aes(x = reorder(EMPRESA, -contagem), y = contagem, fill = GERÊNCIA)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c(
+      "Transporte Madeira" = "#0047B8",
+      "Pátio de Madeira" = "#A4D55D",
+      "Carregamento De Madeira" = "orange"
+    )) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+      axis.text.y = element_text(color = "#1f1f1f"),
+      axis.title = element_text(color = "#1f1f1f"),
+      plot.title = element_text(color = "black"),
+      axis.title.x = element_blank(),  # Remove o nome do eixo x
+      axis.title.y = element_blank(),  # Remove o nome do eixo y
+      #legend.background = element_rect(fill = "white"),
+      #legend.text = element_text(color = "black"),
+      #legend.title = element_text(color = "black"),
+      #legend.key = element_blank(), 
+      #panel.grid.major = element_blank(),
+      #panel.grid.minor = element_blank()
+    )
+  
+  # Transformação para plotly com ajuste do layout
+  ggplotly(p_bar_empresa25) %>%
+    layout(
+      paper_bgcolor = 'white',
+      plot_bgcolor = 'white',
+      font = list(color = 'black'),
+      legend = list(bgcolor = 'white', font = list(color = 'black'))
+    )
+})
+
+```
+
+
+
+### Distribuição da Severidade dos Eventos 
+
+```{r}
+
+renderPlotly({
+  # Filtrando os dados de severidade com base na gerência selecionada
+  df_severidade_filtrada25 <- reactive({
+    # Ajuste para filtrar os dados com base na entrada do usuário
+    if (input$gerencia == "Todas") {
+      df_severo25 %>%
+        filter(SEVERIDADE %in% c("MODERADO", "LEVE", "GRAVE")) %>%
+        group_by(SEVERIDADE) %>%
+        summarise(contagem = n()) %>%
+        arrange(desc(contagem))
+    } else {
+      df_severo25 %>%
+        filter(SEVERIDADE %in% c("MODERADO", "LEVE", "GRAVE"), `GERÊNCIA` == input$gerencia) %>%
+        group_by(SEVERIDADE) %>%
+        summarise(contagem = n()) %>%
+        arrange(desc(contagem))
+    }
+  })
+
+  # Gráfico de pizza com base nos dados filtrados
+  plot_ly(df_severidade_filtrada25(), labels = ~SEVERIDADE, values = ~contagem, type = 'pie',
+          marker = list(colors = c("Leve" = "#A4D55D", "Moderado" = "orange", "Grave" = "red"))) %>%
+    layout(
+      paper_bgcolor = 'white',
+      plot_bgcolor = 'white',
+      font = list(color = 'black'),
+      legend = list(bgcolor = 'white', font = list(color = 'black'))
+    )
+})
+
+
+```
+
+
+
+
+TABELA INTERATIVA - 2025
+===============================================================================
+
+
+Columns
+----------------------------------------------------------------------
+### Data Frame Interativo
+
+```{r}
+#install.packages("DT")
+library(DT)
+# Filtrar os dados do df_seguranca25 pelas gerências específicas
+# Filtrar os dados do df_seguranca25 pelas gerências específicas
+df_tabela25 <- df_seguranca25 %>%
+  filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
+  select(`MÊS`, EMPRESA, `GERÊNCIA`, COLABORADOR, `FUNÇÃO`, SEVERIDADE, `CLASSIFICAÇÃO`, `MÓDULO/ FRENTE DE TRABALHO`, `R.A.E`, `DATA R.A.E ASSINADA`, `R.A.E FINALIZADA DENTRO DO PRAZO`)
+
+# Renderizar a tabela com DT diretamente
+datatable(
+  df_tabela25,
+  options = list(
+    pageLength = 20,
+    autoWidth = TRUE,
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+    class = 'display cell-border stripe hover',
+    style = 'bootstrap',
+    rownames = FALSE
+  ),
+  extensions = c('Buttons', 'Responsive')
+) %>%
+  formatStyle(
+    columns = colnames(df_tabela25),
+    backgroundColor = '#f4f4f4',  # Cor de fundo
+    color = 'black',  # Cor do texto
+    fontWeight = 'bold',  # Texto em negrito
+    borderColor = 'white',  # Cor das bordas das células
+    borderWidth = '1px'
+  )
+
+
+
+
+```
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, include=FALSE}
 library(shiny)
 library(httr)
 library(jsonlite)
 
 # Criação dos dataframes para a IA
-df_AI <- df_seguranca %>%
+df_AI25 <- df_seguranca25 %>%
   filter(`GERÊNCIA` %in% c("Transporte Madeira", "Carregamento De Madeira", "Pátio de Madeira")) %>%
   select(`MÊS`, EMPRESA, `GERÊNCIA`, COLABORADOR, `FUNÇÃO`, SEVERIDADE, `CLASSIFICAÇÃO`, `DESCRIÇÃO`, `MÓDULO/ FRENTE DE TRABALHO`, `PSIF`)
 
@@ -741,7 +1389,7 @@ df_AI <- df_seguranca %>%
 
 
 # Defina a chave de API (substitua no projeto final pela variável de ambiente)
-api_key <- "AIzaSyABboBNM2acdZ9N4m80ZbAVMJsEY04AJ78"
+api_key <- "AIzaSyB0QSqkeYJzQIerIJ1-O_8R8yj9-zelOSk"
 
 # URL da API Gemini
 url <- paste0("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=", api_key)
@@ -788,10 +1436,9 @@ server <- function(input, output, session) {
     Segue abaixo um resumo dos dados de segurança coletados recentemente:
     df_AI
     "
-    
-    # Converte os DataFrames para texto CSV
-    contexto_AI <- paste(capture.output(write.csv(df_AI, row.names = FALSE)), collapse = "\n")
-    contexto_mensal <- paste(capture.output(write.csv(df_mensal, row.names = FALSE)), collapse = "\n")
+    contexto_AI <- toJSON(df_AI, dataframe = "rows", pretty = TRUE)
+    contexto_mensal <- toJSON(df_mensal, dataframe = "rows", pretty = TRUE)
+
     
     # Monta o texto do prompt com o contexto extra e os DataFrames
     prompt_text <- paste(
@@ -855,110 +1502,5 @@ shinyApp(ui = ui, server = server)
 
 ```
 
-Pagina 4
-==============================================================================
 
-```{r}
-# Carregar pacotes
-library(readxl)  # Para leitura de arquivos Excel
-library(DT)      # Para a tabela interativa
-library(shiny) 
-
-
-# Caminho para o arquivo Excel
-caminho_arquivo <- "F:\\Logistica_Florestal\\EQUIPE\\Sócrates Luis dos Santos\\Dados\\Segurança_evento\\dataTraining.xlsx"
-
-# Ler a planilha (ajuste o nome da planilha conforme necessário)
-dados <- read_excel(caminho_arquivo, sheet = "Sheet1") 
-dados <- dados %>% 
-  select(
-    Status, 
-    Name, 
-    `Employee ID`, 
-    `Job Profile`, 
-    `Training Title`, 
-    `Direct Manager`
-    
-  )
-# Substitua "Sheet1" pelo nome da planilha
-# Renderizar a tabela com DT diretamente
-datatable(
-  dados,
-  options = list(
-    pageLength = 20,
-    autoWidth = TRUE,
-    dom = 'Bfrtip',
-    buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-    class = 'display cell-border stripe hover',
-    style = 'bootstrap',
-    rownames = FALSE
-  ),
-  extensions = c('Buttons', 'Responsive')
-) %>%
-  formatStyle(
-    columns = colnames(dados),
-    backgroundColor = '#f4f4f4',  # Cor de fundo
-    color = 'black',  # Cor do texto
-    fontWeight = 'bold',  # Texto em negrito
-    borderColor = 'white',  # Cor das bordas das células
-    borderWidth = '1px'
-  )
-
-```
-
-
-Pagina 5
-==============================================================================
-### Quantidade de Treinamentos por Supervisor
-```{r}
-
-# Carregar pacotes necessários
-library(readxl)
-library(ggplot2)
-library(dplyr)
-
-# Caminho para o arquivo Excel
-caminho_arquivo <- "F:\\Logistica_Florestal\\EQUIPE\\Sócrates Luis dos Santos\\Dados\\Segurança_evento\\dataTraining.xlsx"
-
-# Ler os dados do Excel
-dados <- read_excel(caminho_arquivo, sheet = "Sheet1")
-
-# Agrupar por supervisor e contar o número de treinamentos
-treinamentos_por_supervisor <- dados %>%
-  group_by(`Direct Manager`) %>%
-  summarise(contagem = n()) %>%
-  arrange(desc(contagem))
-
-# Gráfico de barras horizontais com rótulos e sem grade
-p_barras_supervisores <- ggplot(treinamentos_por_supervisor, aes(x = reorder(`Direct Manager`, contagem), y = contagem)) +
-  geom_bar(stat = "identity", fill = "#0047B8", color = "gray40") +  # Cor de baixa saturação
-  geom_text(aes(label = contagem), hjust = -0.1, color = "black", size = 3) +  # Rótulos de dados
-  coord_flip() +  # Gráfico horizontal
-  theme(
-    panel.background = element_rect(fill = "white"),  # Fundo branco
-    plot.background = element_rect(fill = "white"),  # Fundo do plot em branco
-    panel.grid.major = element_blank(),  # Remover grid principal
-    panel.grid.minor = element_blank(),  # Remover grid secundário
-    axis.text.x = element_text(angle = 0, color = "white"),
-    axis.text.y = element_text(color = "black"),
-    axis.title.x = element_blank(),  # Remover título do eixo X
-    axis.title.y = element_blank(),  # Remover título do eixo Y
-    plot.title = element_text(color = "black", size = 10, face = "bold")
-  ) +
-  labs(
-    
-  )
-
-# Exibir o gráfico
-print(p_barras_supervisores)
-
-
-
-```
-
-
-### FFFF
-```{r}
-
-```
 
